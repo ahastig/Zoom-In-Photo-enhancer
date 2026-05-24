@@ -1,36 +1,70 @@
 const video = document.querySelector("#cameraFeed");
-const canvas = document.querySelector("#captureCanvas");
-const startButton = document.querySelector("#startCamera");
-const switchButton = document.querySelector("#switchCamera");
-const captureButton = document.querySelector("#capturePhoto");
-const zoomControl = document.querySelector("#zoomControl");
-const zoomValue = document.querySelector("#zoomValue");
-const autoEnhance = document.querySelector("#autoEnhance");
-const superResolution = document.querySelector("#superResolution");
-const enhanceStrength = document.querySelector("#enhanceStrength");
-const strengthValue = document.querySelector("#strengthValue");
-const preview = document.querySelector("#enhancedPreview");
-const previewFrame = document.querySelector(".preview-frame");
-const downloadLink = document.querySelector("#downloadPhoto");
-const shareButton = document.querySelector("#sharePhoto");
+const startCameraButton = document.querySelector("#startCamera");
+const switchCameraButton = document.querySelector("#switchCamera");
+const startBoothButton = document.querySelector("#startBooth");
+const retakeButton = document.querySelector("#retakeStrip");
+const shotCount = document.querySelector("#shotCount");
+const countdownLength = document.querySelector("#countdownLength");
+const filterSelect = document.querySelector("#filterSelect");
+const frameColor = document.querySelector("#frameColor");
+const countdown = document.querySelector("#countdown");
+const flash = document.querySelector("#flash");
+const captureCanvas = document.querySelector("#captureCanvas");
+const stripCanvas = document.querySelector("#stripCanvas");
+const thumbnailRow = document.querySelector("#thumbnailRow");
+const stripPreview = document.querySelector("#stripPreview");
+const stripImage = document.querySelector("#stripImage");
+const downloadStrip = document.querySelector("#downloadStrip");
+const shareStripButton = document.querySelector("#shareStrip");
 const statusText = document.querySelector("#cameraStatus");
 const statusDot = document.querySelector("#cameraStatusDot");
-const qualitySummary = document.querySelector("#qualitySummary");
-const supportHint = document.querySelector("#supportHint");
+const stripSummary = document.querySelector("#stripSummary");
 
 const state = {
-  facingMode: "environment",
-  fallbackZoom: 1,
-  imageBlob: null,
+  captures: [],
+  facingMode: "user",
   imageFile: null,
   imageUrl: null,
+  isRunning: false,
   stream: null,
-  supportsHardwareZoom: false,
-  track: null,
 };
 
-const MAX_ENHANCED_PIXELS = 12000000;
-const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+const PHOTO_WIDTH = 900;
+const PHOTO_HEIGHT = 675;
+const sleep = (duration) => new Promise((resolve) => setTimeout(resolve, duration));
+
+const filters = {
+  none: {
+    css: "none",
+    canvas: "none",
+    label: "Clean",
+  },
+  mono: {
+    css: "grayscale(1) contrast(1.15)",
+    canvas: "grayscale(1) contrast(1.15)",
+    label: "Black and white",
+  },
+  warm: {
+    css: "sepia(0.18) saturate(1.22) contrast(1.08) brightness(1.04)",
+    canvas: "sepia(0.18) saturate(1.22) contrast(1.08) brightness(1.04)",
+    label: "Warm",
+  },
+  cool: {
+    css: "saturate(1.12) hue-rotate(178deg) contrast(1.05)",
+    canvas: "saturate(1.12) hue-rotate(178deg) contrast(1.05)",
+    label: "Cool",
+  },
+  vintage: {
+    css: "sepia(0.45) contrast(1.08) brightness(1.04) saturate(0.9)",
+    canvas: "sepia(0.45) contrast(1.08) brightness(1.04) saturate(0.9)",
+    label: "Vintage",
+  },
+  pop: {
+    css: "saturate(1.55) contrast(1.16) brightness(1.04)",
+    canvas: "saturate(1.55) contrast(1.16) brightness(1.04)",
+    label: "Color pop",
+  },
+};
 
 const setStatus = (message, ready = false) => {
   statusText.textContent = message;
@@ -44,287 +78,271 @@ const stopCamera = () => {
 
   state.stream.getTracks().forEach((track) => track.stop());
   state.stream = null;
-  state.track = null;
 };
 
-const resetSavedImage = () => {
+const clearStripUrl = () => {
   if (state.imageUrl) {
     URL.revokeObjectURL(state.imageUrl);
   }
 
-  state.imageBlob = null;
   state.imageFile = null;
   state.imageUrl = null;
-  downloadLink.removeAttribute("href");
-  downloadLink.classList.add("disabled");
-  shareButton.disabled = true;
+  downloadStrip.removeAttribute("href");
+  downloadStrip.classList.add("disabled");
+  shareStripButton.disabled = true;
 };
 
-const updateZoomLabel = (value) => {
-  zoomValue.value = `${Number(value).toFixed(1)}x`;
+const resetStrip = () => {
+  clearStripUrl();
+  state.captures = [];
+  thumbnailRow.innerHTML = "";
+  stripImage.removeAttribute("src");
+  stripPreview.classList.remove("has-strip");
+  stripSummary.textContent = "No strip yet";
+  retakeButton.disabled = true;
 };
 
-const updateStrengthLabel = (value) => {
-  strengthValue.value = `${Number(value)}%`;
-};
-
-const applyFallbackZoom = (zoom) => {
-  state.fallbackZoom = Number(zoom);
-  video.style.transform = `scale(${state.fallbackZoom})`;
-};
-
-const setupZoomControl = () => {
-  const capabilities = state.track?.getCapabilities?.() ?? {};
-  const settings = state.track?.getSettings?.() ?? {};
-  const hasHardwareZoom = Boolean(capabilities.zoom);
-  state.supportsHardwareZoom = hasHardwareZoom;
-
-  zoomControl.disabled = false;
-  zoomControl.min = hasHardwareZoom ? capabilities.zoom.min : 1;
-  zoomControl.max = hasHardwareZoom ? capabilities.zoom.max : 4;
-  zoomControl.step = hasHardwareZoom ? capabilities.zoom.step || 0.1 : 0.1;
-  zoomControl.value = hasHardwareZoom ? settings.zoom || capabilities.zoom.min : 1;
-  updateZoomLabel(zoomControl.value);
-  applyFallbackZoom(hasHardwareZoom ? 1 : zoomControl.value);
+const applyLiveFilter = () => {
+  video.style.filter = filters[filterSelect.value].css;
 };
 
 const startCamera = async () => {
   if (!navigator.mediaDevices?.getUserMedia) {
     setStatus("This browser does not support camera access");
-    supportHint.textContent =
-      "Try opening the app in a current mobile browser over HTTPS or localhost.";
     return;
   }
 
   stopCamera();
-  resetSavedImage();
   setStatus("Requesting camera permission...");
 
   try {
-    const constraints = {
+    state.stream = await navigator.mediaDevices.getUserMedia({
       audio: false,
       video: {
         facingMode: { ideal: state.facingMode },
-        height: { ideal: 2160 },
-        width: { ideal: 3840 },
+        height: { ideal: 1440 },
+        width: { ideal: 1920 },
       },
-    };
-
-    state.stream = await navigator.mediaDevices.getUserMedia(constraints);
+    });
     video.srcObject = state.stream;
-    state.track = state.stream.getVideoTracks()[0];
     await video.play();
 
-    setupZoomControl();
-    captureButton.disabled = false;
-    switchButton.disabled = false;
+    applyLiveFilter();
+    startBoothButton.disabled = false;
+    switchCameraButton.disabled = false;
     setStatus("Camera ready", true);
   } catch (error) {
     console.error(error);
     setStatus("Camera could not be started");
-    supportHint.textContent =
-      "Check camera permission, then reload. Camera access also requires HTTPS outside localhost.";
   }
 };
 
 const switchCamera = async () => {
-  state.facingMode = state.facingMode === "environment" ? "user" : "environment";
+  state.facingMode = state.facingMode === "user" ? "environment" : "user";
   await startCamera();
 };
 
-const setZoom = async (event) => {
-  const zoom = Number(event.target.value);
-  updateZoomLabel(zoom);
+const drawCoverVideo = (ctx, targetWidth, targetHeight) => {
+  const sourceWidth = video.videoWidth || 1280;
+  const sourceHeight = video.videoHeight || 960;
+  const sourceRatio = sourceWidth / sourceHeight;
+  const targetRatio = targetWidth / targetHeight;
+  let cropWidth = sourceWidth;
+  let cropHeight = sourceHeight;
 
-  if (state.supportsHardwareZoom) {
-    try {
-      await state.track.applyConstraints({ advanced: [{ zoom }] });
-      video.style.transform = "scale(1)";
-      return;
-    } catch (error) {
-      console.warn("Hardware zoom failed, using visual crop instead.", error);
-      state.supportsHardwareZoom = false;
-    }
+  if (sourceRatio > targetRatio) {
+    cropWidth = sourceHeight * targetRatio;
+  } else {
+    cropHeight = sourceWidth / targetRatio;
   }
 
-  applyFallbackZoom(zoom);
-};
+  const sourceX = (sourceWidth - cropWidth) / 2;
+  const sourceY = (sourceHeight - cropHeight) / 2;
 
-const drawZoomedFrame = (targetCanvas) => {
-  const width = video.videoWidth || 1920;
-  const height = video.videoHeight || 1080;
-  const ctx = targetCanvas.getContext("2d", { willReadFrequently: true });
-  const zoom = state.supportsHardwareZoom ? 1 : state.fallbackZoom;
-  const sourceWidth = width / zoom;
-  const sourceHeight = height / zoom;
-  const sourceX = (width - sourceWidth) / 2;
-  const sourceY = (height - sourceHeight) / 2;
-  const requestedScale = superResolution.checked ? 2 : 1;
-  const requestedPixels = sourceWidth * requestedScale * sourceHeight * requestedScale;
-  const safeScale =
-    requestedPixels > MAX_ENHANCED_PIXELS
-      ? Math.sqrt(MAX_ENHANCED_PIXELS / (sourceWidth * sourceHeight))
-      : requestedScale;
-
-  targetCanvas.width = Math.round(sourceWidth * safeScale);
-  targetCanvas.height = Math.round(sourceHeight * safeScale);
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
+  ctx.save();
+  ctx.filter = filters[filterSelect.value].canvas;
+  if (state.facingMode === "user") {
+    ctx.translate(targetWidth, 0);
+    ctx.scale(-1, 1);
+  }
   ctx.drawImage(
     video,
     sourceX,
     sourceY,
-    sourceWidth,
-    sourceHeight,
+    cropWidth,
+    cropHeight,
     0,
     0,
-    targetCanvas.width,
-    targetCanvas.height,
+    targetWidth,
+    targetHeight,
   );
-
-  return ctx;
+  ctx.restore();
 };
 
-const percentileFromHistogram = (histogram, total, percentile) => {
-  const target = total * percentile;
-  let count = 0;
-
-  for (let index = 0; index < histogram.length; index += 1) {
-    count += histogram[index];
-    if (count >= target) {
-      return index;
-    }
-  }
-
-  return histogram.length - 1;
+const flashScreen = async () => {
+  flash.classList.remove("active");
+  void flash.offsetWidth;
+  flash.classList.add("active");
+  await sleep(180);
 };
 
-const enhanceImage = (ctx, width, height, strengthPercent) => {
-  const frame = ctx.getImageData(0, 0, width, height);
-  const { data } = frame;
-  const original = new Uint8ClampedArray(data);
-  const corrected = new Uint8ClampedArray(data.length);
-  const strength = clamp(strengthPercent / 100, 0, 1);
-  const histograms = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
-  const totals = [0, 0, 0];
-  const pixelCount = width * height;
-
-  for (let index = 0; index < original.length; index += 4) {
-    for (let channel = 0; channel < 3; channel += 1) {
-      const value = original[index + channel];
-      histograms[channel][value] += 1;
-      totals[channel] += value;
-    }
+const showCountdown = async (seconds) => {
+  for (let remaining = seconds; remaining > 0; remaining -= 1) {
+    countdown.textContent = String(remaining);
+    await sleep(850);
   }
+  countdown.textContent = "Pose";
+  await sleep(250);
+  countdown.textContent = "";
+};
 
-  const averages = totals.map((total) => total / pixelCount || 1);
-  const neutralAverage = (averages[0] + averages[1] + averages[2]) / 3;
-  const channelScales = averages.map((average) => clamp(neutralAverage / average, 0.78, 1.24));
-  const lows = histograms.map((histogram) => percentileFromHistogram(histogram, pixelCount, 0.01));
-  const highs = histograms.map((histogram) => percentileFromHistogram(histogram, pixelCount, 0.995));
-  const contrast = 1 + strength * 0.42;
-  const saturation = 1 + strength * 0.46;
-  const lift = strength * 8;
+const capturePhoto = async () => {
+  captureCanvas.width = PHOTO_WIDTH;
+  captureCanvas.height = PHOTO_HEIGHT;
+  const ctx = captureCanvas.getContext("2d");
+  drawCoverVideo(ctx, PHOTO_WIDTH, PHOTO_HEIGHT);
+  await flashScreen();
+  return captureCanvas.toDataURL("image/jpeg", 0.94);
+};
 
-  for (let index = 0; index < data.length; index += 4) {
-    const leveled = [0, 0, 0];
+const addThumbnail = (src, index) => {
+  const img = document.createElement("img");
+  img.src = src;
+  img.alt = `Photo booth shot ${index + 1}`;
+  thumbnailRow.appendChild(img);
+};
 
-    for (let channel = 0; channel < 3; channel += 1) {
-      const range = Math.max(24, highs[channel] - lows[channel]);
-      const balanced = original[index + channel] * (1 + (channelScales[channel] - 1) * strength);
-      const normalized = ((balanced - lows[channel]) / range) * 255;
-      const blended = original[index + channel] * (1 - strength) + normalized * strength;
-      leveled[channel] = clamp((blended - 128) * contrast + 128 + lift, 0, 255);
-    }
+const loadImage = (src) =>
+  new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
 
-    const gray = leveled[0] * 0.299 + leveled[1] * 0.587 + leveled[2] * 0.114;
-    corrected[index] = clamp(gray + (leveled[0] - gray) * saturation, 0, 255);
-    corrected[index + 1] = clamp(gray + (leveled[1] - gray) * saturation, 0, 255);
-    corrected[index + 2] = clamp(gray + (leveled[2] - gray) * saturation, 0, 255);
-    corrected[index + 3] = original[index + 3];
-  }
+const drawRoundedLabel = (ctx, text, x, y, width, height) => {
+  const radius = height / 2;
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.fill();
 
-  const sharpenAmount = strength * 2;
-  const noiseGate = 4 + strength * 7;
-
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const index = (y * width + x) * 4;
-
-      if (x === 0 || y === 0 || x === width - 1 || y === height - 1) {
-        data[index] = corrected[index];
-        data[index + 1] = corrected[index + 1];
-        data[index + 2] = corrected[index + 2];
-        data[index + 3] = corrected[index + 3];
-        continue;
-      }
-
-      for (let channel = 0; channel < 3; channel += 1) {
-        const center = corrected[index + channel];
-        const blur =
-          (corrected[((y - 1) * width + x) * 4 + channel] +
-            corrected[((y + 1) * width + x) * 4 + channel] +
-            corrected[(y * width + x - 1) * 4 + channel] +
-            corrected[(y * width + x + 1) * 4 + channel]) /
-          4;
-        const detail = center - blur;
-        const sharpened = Math.abs(detail) < noiseGate ? center : center + detail * sharpenAmount;
-        data[index + channel] = clamp(sharpened, 0, 255);
-      }
-
-      data[index + 3] = corrected[index + 3];
-    }
-  }
-
-  ctx.putImageData(frame, 0, 0);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "700 30px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, x + width / 2, y + height / 2 + 1);
 };
 
 const canvasToBlob = (targetCanvas) =>
-  new Promise((resolve) => {
-    targetCanvas.toBlob(resolve, "image/jpeg", 0.94);
-  });
+  new Promise((resolve) => targetCanvas.toBlob(resolve, "image/jpeg", 0.94));
 
-const captureAndEnhance = async () => {
-  if (!state.stream) {
-    return;
+const renderStrip = async () => {
+  const shots = await Promise.all(state.captures.map((src) => loadImage(src)));
+  const padding = 62;
+  const gap = 34;
+  const header = 130;
+  const footer = 118;
+  const width = PHOTO_WIDTH + padding * 2;
+  const height = padding + header + shots.length * PHOTO_HEIGHT + (shots.length - 1) * gap + footer;
+  const ctx = stripCanvas.getContext("2d");
+
+  stripCanvas.width = width;
+  stripCanvas.height = height;
+  ctx.fillStyle = frameColor.value;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.fillStyle = frameColor.value === "#111827" ? "#ffffff" : "#111827";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = "900 58px system-ui, sans-serif";
+  ctx.fillText("POCKET PHOTO BOOTH", width / 2, padding + 38);
+  ctx.font = "600 26px system-ui, sans-serif";
+  ctx.fillText(new Date().toLocaleDateString(), width / 2, padding + 88);
+
+  let y = padding + header;
+  for (const shot of shots) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.12)";
+    ctx.fillRect(padding + 10, y + 10, PHOTO_WIDTH, PHOTO_HEIGHT);
+    ctx.drawImage(shot, padding, y, PHOTO_WIDTH, PHOTO_HEIGHT);
+    y += PHOTO_HEIGHT + gap;
   }
 
-  captureButton.disabled = true;
-  captureButton.textContent = "Enhancing...";
-  resetSavedImage();
+  const filterLabel = filters[filterSelect.value].label;
+  ctx.fillStyle = "#f43f5e";
+  drawRoundedLabel(ctx, filterLabel.toUpperCase(), width / 2 - 160, height - padding - 68, 320, 58);
 
-  const ctx = drawZoomedFrame(canvas);
-
-  if (autoEnhance.checked) {
-    enhanceImage(ctx, canvas.width, canvas.height, Number(enhanceStrength.value));
-  }
-
-  const blob = await canvasToBlob(canvas);
+  const blob = await canvasToBlob(stripCanvas);
   if (!blob) {
-    setStatus("Could not create the enhanced photo");
-    captureButton.disabled = false;
-    captureButton.textContent = "Capture & enhance";
-    return;
+    throw new Error("Could not render photo strip");
   }
 
-  state.imageBlob = blob;
-  state.imageFile = new File([blob], "enhanced-photo.jpg", { type: "image/jpeg" });
+  clearStripUrl();
+  state.imageFile = new File([blob], "photo-booth-strip.jpg", { type: "image/jpeg" });
   state.imageUrl = URL.createObjectURL(blob);
-
-  preview.src = state.imageUrl;
-  previewFrame.classList.add("has-image");
-  downloadLink.href = state.imageUrl;
-  downloadLink.classList.remove("disabled");
-  shareButton.disabled = !navigator.canShare?.({ files: [state.imageFile] });
-  qualitySummary.textContent = autoEnhance.checked
-    ? `${canvas.width} x ${canvas.height}px - ${enhanceStrength.value}% enhanced`
-    : `${canvas.width} x ${canvas.height}px - original capture`;
-  setStatus("Enhanced photo ready to save", true);
-  captureButton.disabled = false;
-  captureButton.textContent = "Capture & enhance";
+  stripImage.src = state.imageUrl;
+  stripPreview.classList.add("has-strip");
+  downloadStrip.href = state.imageUrl;
+  downloadStrip.classList.remove("disabled");
+  shareStripButton.disabled = !navigator.canShare?.({ files: [state.imageFile] });
+  stripSummary.textContent = `${shots.length} shots - ${filterLabel}`;
+  retakeButton.disabled = false;
 };
 
-const sharePhoto = async () => {
+const setControlsRunning = (running) => {
+  state.isRunning = running;
+  startBoothButton.disabled = running || !state.stream;
+  startCameraButton.disabled = running;
+  switchCameraButton.disabled = running || !state.stream;
+  retakeButton.disabled = running || state.captures.length === 0;
+  shotCount.disabled = running;
+  countdownLength.disabled = running;
+  filterSelect.disabled = running;
+  frameColor.disabled = running;
+};
+
+const runBooth = async () => {
+  if (!state.stream || state.isRunning) {
+    return;
+  }
+
+  resetStrip();
+  setControlsRunning(true);
+  setStatus("Photo booth is running", true);
+
+  try {
+    const shots = Number(shotCount.value);
+    const seconds = Number(countdownLength.value);
+
+    for (let index = 0; index < shots; index += 1) {
+      stripSummary.textContent = `Taking shot ${index + 1} of ${shots}`;
+      await showCountdown(seconds);
+      const src = await capturePhoto();
+      state.captures.push(src);
+      addThumbnail(src, index);
+      await sleep(450);
+    }
+
+    stripSummary.textContent = "Building strip...";
+    await renderStrip();
+    setStatus("Photo strip ready", true);
+  } catch (error) {
+    console.error(error);
+    setStatus("Photo booth failed. Try again.", Boolean(state.stream));
+  } finally {
+    countdown.textContent = "";
+    setControlsRunning(false);
+  }
+};
+
+const shareStrip = async () => {
   if (!state.imageFile || !navigator.canShare?.({ files: [state.imageFile] })) {
     return;
   }
@@ -332,23 +350,23 @@ const sharePhoto = async () => {
   try {
     await navigator.share({
       files: [state.imageFile],
-      text: "Enhanced with Zoom Photo Enhancer",
-      title: "Enhanced photo",
+      text: "Made with Pocket Photo Booth",
+      title: "Photo booth strip",
     });
   } catch (error) {
     if (error.name !== "AbortError") {
       console.error(error);
-      setStatus("Sharing failed. Try Save photo instead.", true);
+      setStatus("Sharing failed. Try Save strip instead.", true);
     }
   }
 };
 
-startButton.addEventListener("click", startCamera);
-switchButton.addEventListener("click", switchCamera);
-captureButton.addEventListener("click", captureAndEnhance);
-zoomControl.addEventListener("input", setZoom);
-enhanceStrength.addEventListener("input", (event) => updateStrengthLabel(event.target.value));
-shareButton.addEventListener("click", sharePhoto);
+startCameraButton.addEventListener("click", startCamera);
+switchCameraButton.addEventListener("click", switchCamera);
+startBoothButton.addEventListener("click", runBooth);
+retakeButton.addEventListener("click", resetStrip);
+filterSelect.addEventListener("change", applyLiveFilter);
+shareStripButton.addEventListener("click", shareStrip);
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

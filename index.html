@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#111827" />
+    <meta name="theme-color" content="#f43f5e" />
     <meta
       name="description"
-      content="Zoom with your phone camera, enhance the captured image, and save or share the result."
+      content="A mobile-friendly web photo booth for taking camera photo strips and saving or sharing them."
     />
-    <title>Zoom Photo Enhancer</title>
+    <title>Pocket Photo Booth</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles.css" />
@@ -17,12 +17,11 @@
     <main class="app-shell">
       <section class="hero">
         <div>
-          <p class="eyebrow">Camera enhancer</p>
-          <h1>Zoom in, capture, and improve your photo automatically.</h1>
+          <p class="eyebrow">Pocket photo booth</p>
+          <h1>Take a classic photo strip from your phone camera.</h1>
           <p class="intro">
-            Open this page on your phone, point the camera at an object, zoom in,
-            and let the app sharpen, denoise, and rebalance the image before you
-            save it.
+            Start the camera, pick a filter and frame color, then let the booth
+            count down and snap a set of photos. Save or share the finished strip.
           </p>
         </div>
         <div class="status-card" aria-live="polite">
@@ -31,97 +30,95 @@
         </div>
       </section>
 
-      <section class="workspace" aria-label="Camera workspace">
-        <div class="camera-panel">
-          <div class="viewer" id="viewer">
+      <section class="booth-grid" aria-label="Photo booth workspace">
+        <div class="camera-card">
+          <div class="camera-stage" id="cameraStage">
             <video id="cameraFeed" autoplay playsinline muted></video>
-            <canvas id="captureCanvas" hidden></canvas>
-            <div class="focus-reticle" aria-hidden="true"></div>
+            <div class="countdown" id="countdown" aria-live="assertive"></div>
+            <div class="flash" id="flash" aria-hidden="true"></div>
           </div>
 
-          <div class="control-grid">
+          <div class="booth-controls">
             <button class="primary" id="startCamera" type="button">Start camera</button>
             <button id="switchCamera" type="button" disabled>Switch camera</button>
-            <button id="capturePhoto" type="button" disabled>Capture & enhance</button>
+            <button class="accent" id="startBooth" type="button" disabled>Start booth</button>
+            <button id="retakeStrip" type="button" disabled>Retake</button>
           </div>
 
-          <label class="range-control" for="zoomControl">
-            <span>Zoom</span>
-            <output id="zoomValue" for="zoomControl">1.0x</output>
-            <input
-              id="zoomControl"
-              type="range"
-              min="1"
-              max="4"
-              step="0.1"
-              value="1"
-              disabled
-            />
-          </label>
-
-          <label class="range-control" for="enhanceStrength">
-            <span>Enhance strength</span>
-            <output id="strengthValue" for="enhanceStrength">85%</output>
-            <input
-              id="enhanceStrength"
-              type="range"
-              min="0"
-              max="100"
-              step="5"
-              value="85"
-            />
-          </label>
-
-          <div class="enhancement-options" aria-label="Enhancement options">
+          <div class="settings-panel" aria-label="Photo booth settings">
             <label>
-              <input id="autoEnhance" type="checkbox" checked />
-              Auto enhance captures
+              <span>Shots</span>
+              <select id="shotCount">
+                <option value="3">3 photos</option>
+                <option value="4" selected>4 photos</option>
+                <option value="6">6 photos</option>
+              </select>
             </label>
             <label>
-              <input id="superResolution" type="checkbox" checked />
-              2x upscale for extra detail
+              <span>Countdown</span>
+              <select id="countdownLength">
+                <option value="2">2 seconds</option>
+                <option value="3" selected>3 seconds</option>
+                <option value="5">5 seconds</option>
+              </select>
+            </label>
+            <label>
+              <span>Filter</span>
+              <select id="filterSelect">
+                <option value="none">Clean</option>
+                <option value="mono">Black and white</option>
+                <option value="warm" selected>Warm</option>
+                <option value="cool">Cool</option>
+                <option value="vintage">Vintage</option>
+                <option value="pop">Color pop</option>
+              </select>
+            </label>
+            <label>
+              <span>Frame</span>
+              <select id="frameColor">
+                <option value="#ffffff" selected>White</option>
+                <option value="#111827">Black</option>
+                <option value="#fda4af">Pink</option>
+                <option value="#bfdbfe">Blue</option>
+                <option value="#fde68a">Cream</option>
+              </select>
             </label>
           </div>
 
-          <p class="hint" id="supportHint">
-            Camera access requires HTTPS or localhost. On iPhone and Android,
-            use Save/Share after capture to put the image in your files or
-            photos app.
+          <p class="hint">
+            Camera access requires HTTPS or localhost. For best results, hold the
+            phone still and face a bright light source.
           </p>
         </div>
 
-        <aside class="result-panel">
+        <aside class="strip-card">
           <div class="result-header">
             <div>
-              <p class="eyebrow">Enhanced result</p>
-              <h2>Your saved-ready photo appears here.</h2>
+              <p class="eyebrow">Your strip</p>
+              <h2>Preview, save, or share.</h2>
             </div>
-            <span class="quality-pill" id="qualitySummary">No photo yet</span>
+            <span class="quality-pill" id="stripSummary">No strip yet</span>
           </div>
 
-          <div class="preview-frame">
-            <img
-              id="enhancedPreview"
-              alt="Enhanced photo preview will appear after capture"
-            />
+          <div class="thumbnail-row" id="thumbnailRow" aria-label="Captured photos"></div>
+
+          <div class="strip-preview" id="stripPreview">
+            <img id="stripImage" alt="Finished photo booth strip preview" />
             <div class="empty-state" id="emptyState">
-              <strong>Ready when you are</strong>
-              <span>Start the camera, zoom in, then capture.</span>
+              <strong>Ready for your first strip</strong>
+              <span>Press Start booth and pose for each countdown.</span>
             </div>
           </div>
 
           <div class="save-actions">
-            <a class="button primary disabled" id="downloadPhoto" download="enhanced-photo.jpg">
-              Save photo
+            <a class="button primary disabled" id="downloadStrip" download="photo-booth-strip.jpg">
+              Save strip
             </a>
-            <button id="sharePhoto" type="button" disabled>Share to phone</button>
+            <button id="shareStrip" type="button" disabled>Share strip</button>
           </div>
 
-          <ul class="feature-list">
-            <li>Uses the best camera resolution your browser exposes.</li>
-            <li>Applies auto-levels, white balance, color boost, and clarity sharpening.</li>
-            <li>Downloads a JPEG and supports the mobile share sheet where available.</li>
-          </ul>
+          <canvas id="captureCanvas" hidden></canvas>
+          <canvas id="stripCanvas" hidden></canvas>
         </aside>
       </section>
     </main>

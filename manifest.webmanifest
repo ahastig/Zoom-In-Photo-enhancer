@@ -1,11 +1,11 @@
 {
-  "name": "Zoom Photo Enhancer",
-  "short_name": "Photo Enhance",
-  "description": "Capture zoomed camera photos, enhance image quality, and save or share the result.",
+  "name": "Pocket Photo Booth",
+  "short_name": "Photo Booth",
+  "description": "Take timed camera photos, build a classic photo booth strip, and save or share it.",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#08111f",
-  "theme_color": "#111827",
+  "background_color": "#fff7ed",
+  "theme_color": "#f43f5e",
   "icons": [
     {
       "src": "icon.svg",
