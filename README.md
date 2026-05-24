@@ -53,10 +53,10 @@ the **Deploy to GitHub Pages** workflow.
 ### Immediate free hosted URL
 
 While GitHub Pages is waiting to be enabled or merged, the same static app is
-available for free through jsDelivr at:
+available as a pinned free jsDelivr-hosted copy at:
 
 ```text
-https://cdn.jsdelivr.net/gh/ahastig/Zoom-In-Photo-enhancer@cursor-free-deploy-a847/index.html
+https://cdn.jsdelivr.net/gh/ahastig/Zoom-In-Photo-enhancer@af64cca9b211db9001a624e5b2cdfa0474ab05df/index.html
 ```
 
 Use this HTTPS URL on your phone to test camera access right away.
