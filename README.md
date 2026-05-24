@@ -56,7 +56,12 @@ While GitHub Pages is waiting to be enabled or merged, the same static app is
 available as a pinned free RawCDN-hosted copy at:
 
 ```text
-https://rawcdn.githack.com/ahastig/Zoom-In-Photo-enhancer/4f93b747c890998133d8d2ea109a8e30ef4806a1/index.html
+https://rawcdn.githack.com/ahastig/Zoom-In-Photo-enhancer/f485fed91933d417530b42e110a52a753f64c2bd/index.html
 ```
 
 Use this HTTPS URL on your phone to test camera access right away.
+
+
+If the change is too subtle on a photo, move **Enhance strength** closer to
+100%. Browser enhancement can sharpen, rebalance, and upscale the capture, but
+it cannot recover detail that the camera sensor never captured.
