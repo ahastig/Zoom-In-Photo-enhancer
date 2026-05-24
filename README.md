@@ -48,3 +48,15 @@ https://ahastig.github.io/Zoom-In-Photo-enhancer/
 If the first deployment does not start automatically, open the repository
 settings in GitHub, enable Pages with **GitHub Actions** as the source, and run
 the **Deploy to GitHub Pages** workflow.
+
+
+### Immediate free hosted URL
+
+While GitHub Pages is waiting to be enabled or merged, the same static app is
+available for free through jsDelivr at:
+
+```text
+https://cdn.jsdelivr.net/gh/ahastig/Zoom-In-Photo-enhancer@cursor-free-deploy-a847/index.html
+```
+
+Use this HTTPS URL on your phone to test camera access right away.
