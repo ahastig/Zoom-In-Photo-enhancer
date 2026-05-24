@@ -34,3 +34,17 @@ http://localhost:4173
 
 For phone testing, deploy the files to any HTTPS static host or use a secure
 tunnel to your local server.
+
+
+## Free deployment
+
+This repository includes a GitHub Pages workflow. After the changes are merged
+to `main`, GitHub Actions publishes the app at:
+
+```text
+https://ahastig.github.io/Zoom-In-Photo-enhancer/
+```
+
+If the first deployment does not start automatically, open the repository
+settings in GitHub, enable Pages with **GitHub Actions** as the source, and run
+the **Deploy to GitHub Pages** workflow.
