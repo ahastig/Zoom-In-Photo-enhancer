@@ -7,6 +7,7 @@ const shotCount = document.querySelector("#shotCount");
 const countdownLength = document.querySelector("#countdownLength");
 const filterSelect = document.querySelector("#filterSelect");
 const frameColor = document.querySelector("#frameColor");
+const borderStyle = document.querySelector("#borderStyle");
 const countdown = document.querySelector("#countdown");
 const flash = document.querySelector("#flash");
 const captureCanvas = document.querySelector("#captureCanvas");
@@ -40,30 +41,59 @@ const filters = {
     label: "Clean",
   },
   mono: {
-    css: "grayscale(1) contrast(1.15)",
-    canvas: "grayscale(1) contrast(1.15)",
+    css: "grayscale(1) contrast(1.18) brightness(1.03)",
+    canvas: "grayscale(1) contrast(1.18) brightness(1.03)",
     label: "Black and white",
   },
   warm: {
     css: "sepia(0.18) saturate(1.22) contrast(1.08) brightness(1.04)",
     canvas: "sepia(0.18) saturate(1.22) contrast(1.08) brightness(1.04)",
-    label: "Warm",
+    label: "Warm glow",
   },
   cool: {
-    css: "saturate(1.12) hue-rotate(178deg) contrast(1.05)",
-    canvas: "saturate(1.12) hue-rotate(178deg) contrast(1.05)",
-    label: "Cool",
+    css: "saturate(1.12) hue-rotate(178deg) contrast(1.05) brightness(1.03)",
+    canvas: "saturate(1.12) hue-rotate(178deg) contrast(1.05) brightness(1.03)",
+    label: "Cool flash",
   },
   vintage: {
-    css: "sepia(0.45) contrast(1.08) brightness(1.04) saturate(0.9)",
-    canvas: "sepia(0.45) contrast(1.08) brightness(1.04) saturate(0.9)",
-    label: "Vintage",
+    css: "sepia(0.48) contrast(1.1) brightness(1.05) saturate(0.86)",
+    canvas: "sepia(0.48) contrast(1.1) brightness(1.05) saturate(0.86)",
+    label: "Vintage film",
   },
   pop: {
-    css: "saturate(1.55) contrast(1.16) brightness(1.04)",
-    canvas: "saturate(1.55) contrast(1.16) brightness(1.04)",
+    css: "saturate(1.65) contrast(1.18) brightness(1.05)",
+    canvas: "saturate(1.65) contrast(1.18) brightness(1.05)",
     label: "Color pop",
   },
+  noir: {
+    css: "grayscale(1) contrast(1.42) brightness(0.95)",
+    canvas: "grayscale(1) contrast(1.42) brightness(0.95)",
+    label: "Noir booth",
+  },
+  blush: {
+    css: "sepia(0.12) saturate(1.35) hue-rotate(315deg) brightness(1.07)",
+    canvas: "sepia(0.12) saturate(1.35) hue-rotate(315deg) brightness(1.07)",
+    label: "Blush pink",
+  },
+  sunset: {
+    css: "sepia(0.28) saturate(1.55) hue-rotate(340deg) contrast(1.12)",
+    canvas: "sepia(0.28) saturate(1.55) hue-rotate(340deg) contrast(1.12)",
+    label: "Sunset",
+  },
+  dream: {
+    css: "brightness(1.1) contrast(0.92) saturate(1.25)",
+    canvas: "brightness(1.1) contrast(0.92) saturate(1.25)",
+    label: "Dreamy soft",
+  },
+};
+
+const borderStyles = {
+  classic: "Classic clean",
+  dotted: "Dotted lights",
+  film: "Film strip",
+  hearts: "Hearts",
+  sparkle: "Sparkle frame",
+  confetti: "Confetti",
 };
 
 const setStatus = (message, ready = false) => {
@@ -142,7 +172,7 @@ const switchCamera = async () => {
   await startCamera();
 };
 
-const drawCoverVideo = (ctx, targetWidth, targetHeight) => {
+const drawCoverVideo = (ctx, targetWidth, targetHeight, filterValue = "none") => {
   const sourceWidth = video.videoWidth || 1280;
   const sourceHeight = video.videoHeight || 960;
   const sourceRatio = sourceWidth / sourceHeight;
@@ -160,7 +190,7 @@ const drawCoverVideo = (ctx, targetWidth, targetHeight) => {
   const sourceY = (sourceHeight - cropHeight) / 2;
 
   ctx.save();
-  ctx.filter = filters[filterSelect.value].canvas;
+  ctx.filter = filters[filterValue].canvas;
   if (state.facingMode === "user") {
     ctx.translate(targetWidth, 0);
     ctx.scale(-1, 1);
@@ -220,6 +250,129 @@ const loadImage = (src) =>
     img.src = src;
   });
 
+const getFrameInk = (background) => (background === "#111827" ? "#ffffff" : "#111827");
+
+const drawHeart = (ctx, x, y, size, color) => {
+  const top = size * 0.3;
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x, y + top);
+  ctx.bezierCurveTo(x, y, x - size / 2, y, x - size / 2, y + top);
+  ctx.bezierCurveTo(x - size / 2, y + size * 0.62, x, y + size * 0.82, x, y + size);
+  ctx.bezierCurveTo(x, y + size * 0.82, x + size / 2, y + size * 0.62, x + size / 2, y + top);
+  ctx.bezierCurveTo(x + size / 2, y, x, y, x, y + top);
+  ctx.fill();
+  ctx.restore();
+};
+
+const drawStar = (ctx, x, y, outer, inner, color) => {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  for (let point = 0; point < 10; point += 1) {
+    const radius = point % 2 === 0 ? outer : inner;
+    const angle = -Math.PI / 2 + (point * Math.PI) / 5;
+    const px = x + Math.cos(angle) * radius;
+    const py = y + Math.sin(angle) * radius;
+    if (point === 0) {
+      ctx.moveTo(px, py);
+    } else {
+      ctx.lineTo(px, py);
+    }
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+};
+
+const drawBorderDecoration = (ctx, width, height, padding, style, ink) => {
+  const accent = "#f43f5e";
+  const gold = "#f59e0b";
+  const blue = "#38bdf8";
+
+  if (style === "dotted") {
+    ctx.save();
+    for (let x = 36; x < width; x += 58) {
+      ctx.fillStyle = x % 116 === 36 ? accent : gold;
+      ctx.beginPath();
+      ctx.arc(x, 34, 12, 0, Math.PI * 2);
+      ctx.arc(x, height - 34, 12, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (let y = 94; y < height - 94; y += 58) {
+      ctx.fillStyle = y % 116 === 94 ? blue : accent;
+      ctx.beginPath();
+      ctx.arc(34, y, 10, 0, Math.PI * 2);
+      ctx.arc(width - 34, y, 10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    return;
+  }
+
+  if (style === "film") {
+    ctx.save();
+    ctx.fillStyle = ink;
+    ctx.fillRect(18, 18, 46, height - 36);
+    ctx.fillRect(width - 64, 18, 46, height - 36);
+    ctx.fillStyle = ink === "#ffffff" ? "#111827" : "#ffffff";
+    for (let y = 42; y < height - 42; y += 72) {
+      ctx.fillRect(31, y, 20, 34);
+      ctx.fillRect(width - 51, y, 20, 34);
+    }
+    ctx.restore();
+    return;
+  }
+
+  if (style === "hearts") {
+    for (let x = padding / 2; x < width; x += 120) {
+      drawHeart(ctx, x, 24, 30, accent);
+      drawHeart(ctx, width - x, height - 54, 30, gold);
+    }
+    for (let y = 150; y < height - 150; y += 180) {
+      drawHeart(ctx, 30, y, 28, accent);
+      drawHeart(ctx, width - 30, y + 64, 28, gold);
+    }
+    return;
+  }
+
+  if (style === "sparkle") {
+    for (let x = 52; x < width; x += 128) {
+      drawStar(ctx, x, 42, 22, 9, gold);
+      drawStar(ctx, width - x, height - 42, 20, 8, accent);
+    }
+    for (let y = 140; y < height - 140; y += 170) {
+      drawStar(ctx, 34, y, 18, 7, blue);
+      drawStar(ctx, width - 34, y + 60, 18, 7, gold);
+    }
+    return;
+  }
+
+  if (style === "confetti") {
+    const colors = [accent, gold, blue, "#22c55e", "#a855f7"];
+    ctx.save();
+    for (let i = 0; i < 80; i += 1) {
+      const edge = i % 4;
+      const x = edge < 2 ? 32 + ((i * 71) % (width - 64)) : edge === 2 ? 36 : width - 36;
+      const y = edge < 2 ? (edge === 0 ? 36 : height - 36) : 80 + ((i * 97) % (height - 160));
+      ctx.translate(x, y);
+      ctx.rotate((i * 29 * Math.PI) / 180);
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.fillRect(-10, -4, 20, 8);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    }
+    ctx.restore();
+  }
+};
+
+const drawImageWithFilter = (ctx, image, x, y, width, height, filterValue) => {
+  ctx.save();
+  ctx.filter = filters[filterValue].canvas;
+  ctx.drawImage(image, x, y, width, height);
+  ctx.restore();
+};
+
 const drawRoundedLabel = (ctx, text, x, y, width, height) => {
   const radius = height / 2;
   ctx.beginPath();
@@ -253,13 +406,18 @@ const renderStrip = async () => {
   const width = PHOTO_WIDTH + padding * 2;
   const height = padding + header + shots.length * PHOTO_HEIGHT + (shots.length - 1) * gap + footer;
   const ctx = stripCanvas.getContext("2d");
+  const filterValue = filterSelect.value;
+  const filterLabel = filters[filterValue].label;
+  const borderLabel = borderStyles[borderStyle.value];
+  const ink = getFrameInk(frameColor.value);
 
   stripCanvas.width = width;
   stripCanvas.height = height;
   ctx.fillStyle = frameColor.value;
   ctx.fillRect(0, 0, width, height);
+  drawBorderDecoration(ctx, width, height, padding, borderStyle.value, ink);
 
-  ctx.fillStyle = frameColor.value === "#111827" ? "#ffffff" : "#111827";
+  ctx.fillStyle = ink;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.font = "900 58px system-ui, sans-serif";
@@ -269,15 +427,19 @@ const renderStrip = async () => {
 
   let y = padding + header;
   for (const shot of shots) {
-    ctx.fillStyle = "rgba(0, 0, 0, 0.12)";
+    ctx.fillStyle = "rgba(0, 0, 0, 0.16)";
     ctx.fillRect(padding + 10, y + 10, PHOTO_WIDTH, PHOTO_HEIGHT);
-    ctx.drawImage(shot, padding, y, PHOTO_WIDTH, PHOTO_HEIGHT);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(padding - 10, y - 10, PHOTO_WIDTH + 20, PHOTO_HEIGHT + 20);
+    drawImageWithFilter(ctx, shot, padding, y, PHOTO_WIDTH, PHOTO_HEIGHT, filterValue);
     y += PHOTO_HEIGHT + gap;
   }
 
-  const filterLabel = filters[filterSelect.value].label;
   ctx.fillStyle = "#f43f5e";
-  drawRoundedLabel(ctx, filterLabel.toUpperCase(), width / 2 - 160, height - padding - 68, 320, 58);
+  drawRoundedLabel(ctx, filterLabel.toUpperCase(), width / 2 - 160, height - padding - 76, 320, 52);
+  ctx.fillStyle = ink;
+  ctx.font = "700 24px system-ui, sans-serif";
+  ctx.fillText(borderLabel, width / 2, height - padding - 18);
 
   const blob = await canvasToBlob(stripCanvas);
   if (!blob) {
@@ -292,7 +454,7 @@ const renderStrip = async () => {
   downloadStrip.href = state.imageUrl;
   downloadStrip.classList.remove("disabled");
   shareStripButton.disabled = !navigator.canShare?.({ files: [state.imageFile] });
-  stripSummary.textContent = `${shots.length} shots - ${filterLabel}`;
+  stripSummary.textContent = `${shots.length} shots - ${filterLabel} - ${borderLabel}`;
   retakeButton.disabled = false;
 };
 
@@ -306,6 +468,7 @@ const setControlsRunning = (running) => {
   countdownLength.disabled = running;
   filterSelect.disabled = running;
   frameColor.disabled = running;
+  borderStyle.disabled = running;
 };
 
 const runBooth = async () => {
@@ -342,6 +505,16 @@ const runBooth = async () => {
   }
 };
 
+const renderExistingStrip = async () => {
+  if (state.isRunning || state.captures.length === 0) {
+    return;
+  }
+
+  stripSummary.textContent = "Updating style...";
+  await renderStrip();
+  setStatus("Photo strip updated", true);
+};
+
 const shareStrip = async () => {
   if (!state.imageFile || !navigator.canShare?.({ files: [state.imageFile] })) {
     return;
@@ -365,7 +538,12 @@ startCameraButton.addEventListener("click", startCamera);
 switchCameraButton.addEventListener("click", switchCamera);
 startBoothButton.addEventListener("click", runBooth);
 retakeButton.addEventListener("click", resetStrip);
-filterSelect.addEventListener("change", applyLiveFilter);
+filterSelect.addEventListener("change", () => {
+  applyLiveFilter();
+  renderExistingStrip();
+});
+frameColor.addEventListener("change", renderExistingStrip);
+borderStyle.addEventListener("change", renderExistingStrip);
 shareStripButton.addEventListener("click", shareStrip);
 
 if ("serviceWorker" in navigator) {
