@@ -1,0 +1,17 @@
+{
+  "name": "Pocket Photo Booth",
+  "short_name": "Photo Booth",
+  "description": "Take timed camera photos, build a classic photo booth strip, and save or share it.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#fff7ed",
+  "theme_color": "#f43f5e",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

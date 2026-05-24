@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f43f5e" />
+    <meta
+      name="description"
+      content="A mobile-friendly web photo booth for taking camera photo strips and saving or sharing them."
+    />
+    <title>Pocket Photo Booth</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Pocket photo booth</p>
+          <h1>Take a classic photo strip from your phone camera.</h1>
+          <p class="intro">
+            Start the camera, pick a filter and frame color, then let the booth
+            count down and snap a set of photos. Save or share the finished strip.
+          </p>
+        </div>
+        <div class="status-card" aria-live="polite">
+          <span class="status-dot" id="cameraStatusDot"></span>
+          <span id="cameraStatus">Camera is not started</span>
+        </div>
+      </section>
+
+      <section class="booth-grid" aria-label="Photo booth workspace">
+        <div class="camera-card">
+          <div class="camera-stage" id="cameraStage">
+            <video id="cameraFeed" autoplay playsinline muted></video>
+            <div class="countdown" id="countdown" aria-live="assertive"></div>
+            <div class="flash" id="flash" aria-hidden="true"></div>
+          </div>
+
+          <div class="booth-controls">
+            <button class="primary" id="startCamera" type="button">Start camera</button>
+            <button id="switchCamera" type="button" disabled>Switch camera</button>
+            <button class="accent" id="startBooth" type="button" disabled>Start booth</button>
+            <button id="retakeStrip" type="button" disabled>Retake</button>
+          </div>
+
+          <div class="settings-panel" aria-label="Photo booth settings">
+            <label>
+              <span>Shots</span>
+              <select id="shotCount">
+                <option value="3">3 photos</option>
+                <option value="4" selected>4 photos</option>
+                <option value="6">6 photos</option>
+              </select>
+            </label>
+            <label>
+              <span>Countdown</span>
+              <select id="countdownLength">
+                <option value="2">2 seconds</option>
+                <option value="3" selected>3 seconds</option>
+                <option value="5">5 seconds</option>
+              </select>
+            </label>
+            <label>
+              <span>Edit filter</span>
+              <select id="filterSelect">
+                <option value="none">Clean</option>
+                <option value="mono">Black and white</option>
+                <option value="warm" selected>Warm glow</option>
+                <option value="cool">Cool flash</option>
+                <option value="vintage">Vintage film</option>
+                <option value="cameraUi">Camera UI</option>
+                <option value="pop">Color pop</option>
+                <option value="noir">Noir booth</option>
+                <option value="blush">Blush pink</option>
+                <option value="sunset">Sunset</option>
+                <option value="dream">Dreamy soft</option>
+              </select>
+            </label>
+            <label>
+              <span>Frame color</span>
+              <select id="frameColor">
+                <option value="#ffffff" selected>White</option>
+                <option value="#111827">Black</option>
+                <option value="#fda4af">Pink</option>
+                <option value="#bfdbfe">Blue</option>
+                <option value="#fde68a">Cream</option>
+                <option value="#bbf7d0">Mint</option>
+                <option value="#ddd6fe">Lavender</option>
+              </select>
+            </label>
+            <label>
+              <span>Custom border</span>
+              <select id="borderStyle">
+                <option value="classic" selected>Classic clean</option>
+                <option value="dotted">Dotted lights</option>
+                <option value="film">Film strip</option>
+                <option value="hearts">Hearts</option>
+                <option value="sparkle">Sparkle frame</option>
+                <option value="confetti">Confetti</option>
+              </select>
+            </label>
+          </div>
+
+          <p class="hint">
+            Camera access requires HTTPS or localhost. After a strip is made,
+            change the edit filter, frame color, or custom border to update it.
+          </p>
+        </div>
+
+        <aside class="strip-card">
+          <div class="result-header">
+            <div>
+              <p class="eyebrow">Your strip</p>
+              <h2>Preview, save, or share.</h2>
+            </div>
+            <span class="quality-pill" id="stripSummary">No strip yet</span>
+          </div>
+
+          <div class="thumbnail-row" id="thumbnailRow" aria-label="Captured photos"></div>
+
+          <div class="strip-preview" id="stripPreview">
+            <img id="stripImage" alt="Finished photo booth strip preview" />
+            <div class="empty-state" id="emptyState">
+              <strong>Ready for your first strip</strong>
+              <span>Press Start booth and pose for each countdown.</span>
+            </div>
+          </div>
+
+          <div class="save-actions">
+            <a class="button primary disabled" id="downloadStrip" download="photo-booth-strip.jpg">
+              Save strip
+            </a>
+            <button id="shareStrip" type="button" disabled>Share strip</button>
+          </div>
+
+          <canvas id="captureCanvas" hidden></canvas>
+          <canvas id="stripCanvas" hidden></canvas>
+        </aside>
+      </section>
+    </main>
+
+    <script src="app.js" type="module"></script>
+  </body>
+</html>
