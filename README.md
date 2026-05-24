@@ -49,6 +49,9 @@ the **Deploy to GitHub Pages** workflow.
 
 ## Immediate free hosted URL
 
-While GitHub Pages is waiting to be enabled or merged, the same static app can
-be hosted as a pinned free RawCDN copy. The latest tested preview URL is listed
-in the pull request for this branch.
+While GitHub Pages is waiting to be enabled or merged, the same static app is
+available as a pinned free RawCDN copy at:
+
+```text
+https://rawcdn.githack.com/ahastig/Zoom-In-Photo-enhancer/305cdaa9540cf62d260be86f29e5d96e0f535c05/index.html
+```
