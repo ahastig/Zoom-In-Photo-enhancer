@@ -56,9 +56,14 @@ const filters = {
     label: "Cool flash",
   },
   vintage: {
-    css: "sepia(0.48) contrast(1.1) brightness(1.05) saturate(0.86)",
-    canvas: "sepia(0.48) contrast(1.1) brightness(1.05) saturate(0.86)",
+    css: "sepia(0.78) contrast(1.24) brightness(0.96) saturate(0.62)",
+    canvas: "sepia(0.78) contrast(1.24) brightness(0.96) saturate(0.62)",
     label: "Vintage film",
+  },
+  cameraUi: {
+    css: "contrast(1.12) saturate(0.88) brightness(1.03)",
+    canvas: "contrast(1.12) saturate(0.88) brightness(1.03)",
+    label: "Camera UI",
   },
   pop: {
     css: "saturate(1.65) contrast(1.18) brightness(1.05)",
@@ -366,11 +371,147 @@ const drawBorderDecoration = (ctx, width, height, padding, style, ink) => {
   }
 };
 
+const drawVintageEffect = (ctx, x, y, width, height) => {
+  ctx.save();
+  const warmFade = ctx.createLinearGradient(x, y, x + width, y + height);
+  warmFade.addColorStop(0, "rgba(251, 191, 36, 0.18)");
+  warmFade.addColorStop(0.48, "rgba(244, 114, 182, 0.08)");
+  warmFade.addColorStop(1, "rgba(69, 26, 3, 0.28)");
+  ctx.fillStyle = warmFade;
+  ctx.fillRect(x, y, width, height);
+
+  const vignette = ctx.createRadialGradient(
+    x + width / 2,
+    y + height / 2,
+    width * 0.18,
+    x + width / 2,
+    y + height / 2,
+    width * 0.72,
+  );
+  vignette.addColorStop(0, "rgba(255, 255, 255, 0)");
+  vignette.addColorStop(0.62, "rgba(88, 28, 14, 0.12)");
+  vignette.addColorStop(1, "rgba(17, 24, 39, 0.52)");
+  ctx.fillStyle = vignette;
+  ctx.fillRect(x, y, width, height);
+
+  ctx.globalAlpha = 0.18;
+  ctx.strokeStyle = "#fff7ed";
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 12; i += 1) {
+    const scratchX = x + ((i * 173) % width);
+    ctx.beginPath();
+    ctx.moveTo(scratchX, y + ((i * 47) % 90));
+    ctx.lineTo(scratchX + ((i % 3) - 1) * 16, y + height - ((i * 31) % 120));
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 0.08;
+  ctx.fillStyle = "#111827";
+  for (let i = 0; i < 420; i += 1) {
+    const dotX = x + ((i * 97) % width);
+    const dotY = y + ((i * 53) % height);
+    ctx.fillRect(dotX, dotY, i % 3 === 0 ? 2 : 1, i % 4 === 0 ? 2 : 1);
+  }
+  ctx.restore();
+};
+
+const drawCameraUiEffect = (ctx, x, y, width, height) => {
+  ctx.save();
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.52)";
+  ctx.lineWidth = 2;
+  ctx.setLineDash([10, 14]);
+  ctx.beginPath();
+  ctx.moveTo(x + width / 3, y);
+  ctx.lineTo(x + width / 3, y + height);
+  ctx.moveTo(x + (width * 2) / 3, y);
+  ctx.lineTo(x + (width * 2) / 3, y + height);
+  ctx.moveTo(x, y + height / 3);
+  ctx.lineTo(x + width, y + height / 3);
+  ctx.moveTo(x, y + (height * 2) / 3);
+  ctx.lineTo(x + width, y + (height * 2) / 3);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const corner = 86;
+  const inset = 28;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.94)";
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.moveTo(x + inset, y + inset + corner);
+  ctx.lineTo(x + inset, y + inset);
+  ctx.lineTo(x + inset + corner, y + inset);
+  ctx.moveTo(x + width - inset - corner, y + inset);
+  ctx.lineTo(x + width - inset, y + inset);
+  ctx.lineTo(x + width - inset, y + inset + corner);
+  ctx.moveTo(x + inset, y + height - inset - corner);
+  ctx.lineTo(x + inset, y + height - inset);
+  ctx.lineTo(x + inset + corner, y + height - inset);
+  ctx.moveTo(x + width - inset - corner, y + height - inset);
+  ctx.lineTo(x + width - inset, y + height - inset);
+  ctx.lineTo(x + width - inset, y + height - inset - corner);
+  ctx.stroke();
+
+  ctx.fillStyle = "rgba(0, 0, 0, 0.42)";
+  ctx.fillRect(x + 24, y + 22, 198, 56);
+  ctx.fillRect(x + width - 238, y + 22, 214, 56);
+  ctx.fillRect(x + 24, y + height - 82, 258, 56);
+
+  ctx.fillStyle = "#ef4444";
+  ctx.beginPath();
+  ctx.arc(x + 56, y + 50, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 28px system-ui, sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText("REC", x + 78, y + 51);
+
+  ctx.textAlign = "right";
+  ctx.fillText("HD 4K", x + width - 48, y + 51);
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(x + width - 116, y + 37, 44, 24);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(x + width - 68, y + 44, 5, 10);
+  ctx.fillRect(x + width - 111, y + 42, 31, 14);
+
+  ctx.textAlign = "left";
+  ctx.fillText(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), x + 46, y + height - 54);
+  ctx.textAlign = "right";
+  ctx.fillText("ISO AUTO", x + width - 46, y + height - 54);
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.88)";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(x + width / 2, y + height / 2, 66, 0, Math.PI * 2);
+  ctx.moveTo(x + width / 2 - 96, y + height / 2);
+  ctx.lineTo(x + width / 2 - 34, y + height / 2);
+  ctx.moveTo(x + width / 2 + 34, y + height / 2);
+  ctx.lineTo(x + width / 2 + 96, y + height / 2);
+  ctx.moveTo(x + width / 2, y + height / 2 - 96);
+  ctx.lineTo(x + width / 2, y + height / 2 - 34);
+  ctx.moveTo(x + width / 2, y + height / 2 + 34);
+  ctx.lineTo(x + width / 2, y + height / 2 + 96);
+  ctx.stroke();
+  ctx.restore();
+};
+
+const drawFilterEffectOverlay = (ctx, x, y, width, height, filterValue) => {
+  if (filterValue === "vintage") {
+    drawVintageEffect(ctx, x, y, width, height);
+  }
+
+  if (filterValue === "cameraUi") {
+    drawCameraUiEffect(ctx, x, y, width, height);
+  }
+};
+
 const drawImageWithFilter = (ctx, image, x, y, width, height, filterValue) => {
   ctx.save();
   ctx.filter = filters[filterValue].canvas;
   ctx.drawImage(image, x, y, width, height);
   ctx.restore();
+  drawFilterEffectOverlay(ctx, x, y, width, height, filterValue);
 };
 
 const drawRoundedLabel = (ctx, text, x, y, width, height) => {

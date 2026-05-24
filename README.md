@@ -9,11 +9,13 @@ the finished image on your phone.
 - Live camera preview with front/back camera switching.
 - Countdown before every shot.
 - 3, 4, or 6-photo booth sessions.
-- Edit filters that can be changed after capture: clean, black and white, warm glow, cool flash, vintage film, color pop, noir booth, blush pink, sunset, and dreamy soft.
+- Edit filters that can be changed after capture: clean, black and white, warm glow, cool flash, vintage film, camera UI, color pop, noir booth, blush pink, sunset, and dreamy soft.
 - Custom border styles: classic clean, dotted lights, film strip, hearts, sparkle frame, and confetti.
 - Frame color choices for the finished strip.
 - Thumbnail previews of each captured shot.
 - Re-render the finished strip when the filter, frame color, or custom border changes.
+- The Camera UI filter adds REC, viewfinder brackets, grid lines, battery, and camera readouts.
+- Vintage film now adds stronger sepia tones, grain, scratches, and a vignette.
 - Save the finished strip as a JPEG.
 - Share the strip through the mobile share sheet when supported.
 - Progressive web app manifest and service worker for an installable app shell.
