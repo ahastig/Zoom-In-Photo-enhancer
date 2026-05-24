@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#111827" />
+    <meta
+      name="description"
+      content="Zoom with your phone camera, enhance the captured image, and save or share the result."
+    />
+    <title>Zoom Photo Enhancer</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Camera enhancer</p>
+          <h1>Zoom in, capture, and improve your photo automatically.</h1>
+          <p class="intro">
+            Open this page on your phone, point the camera at an object, zoom in,
+            and let the app sharpen, denoise, and rebalance the image before you
+            save it.
+          </p>
+        </div>
+        <div class="status-card" aria-live="polite">
+          <span class="status-dot" id="cameraStatusDot"></span>
+          <span id="cameraStatus">Camera is not started</span>
+        </div>
+      </section>
+
+      <section class="workspace" aria-label="Camera workspace">
+        <div class="camera-panel">
+          <div class="viewer" id="viewer">
+            <video id="cameraFeed" autoplay playsinline muted></video>
+            <canvas id="captureCanvas" hidden></canvas>
+            <div class="focus-reticle" aria-hidden="true"></div>
+          </div>
+
+          <div class="control-grid">
+            <button class="primary" id="startCamera" type="button">Start camera</button>
+            <button id="switchCamera" type="button" disabled>Switch camera</button>
+            <button id="capturePhoto" type="button" disabled>Capture & enhance</button>
+          </div>
+
+          <label class="range-control" for="zoomControl">
+            <span>Zoom</span>
+            <output id="zoomValue" for="zoomControl">1.0x</output>
+            <input
+              id="zoomControl"
+              type="range"
+              min="1"
+              max="4"
+              step="0.1"
+              value="1"
+              disabled
+            />
+          </label>
+
+          <div class="enhancement-options" aria-label="Enhancement options">
+            <label>
+              <input id="autoEnhance" type="checkbox" checked />
+              Auto enhance captures
+            </label>
+            <label>
+              <input id="superResolution" type="checkbox" checked />
+              2x upscale for extra detail
+            </label>
+          </div>
+
+          <p class="hint" id="supportHint">
+            Camera access requires HTTPS or localhost. On iPhone and Android,
+            use Save/Share after capture to put the image in your files or
+            photos app.
+          </p>
+        </div>
+
+        <aside class="result-panel">
+          <div class="result-header">
+            <div>
+              <p class="eyebrow">Enhanced result</p>
+              <h2>Your saved-ready photo appears here.</h2>
+            </div>
+            <span class="quality-pill" id="qualitySummary">No photo yet</span>
+          </div>
+
+          <div class="preview-frame">
+            <img
+              id="enhancedPreview"
+              alt="Enhanced photo preview will appear after capture"
+            />
+            <div class="empty-state" id="emptyState">
+              <strong>Ready when you are</strong>
+              <span>Start the camera, zoom in, then capture.</span>
+            </div>
+          </div>
+
+          <div class="save-actions">
+            <a class="button primary disabled" id="downloadPhoto" download="enhanced-photo.jpg">
+              Save photo
+            </a>
+            <button id="sharePhoto" type="button" disabled>Share to phone</button>
+          </div>
+
+          <ul class="feature-list">
+            <li>Uses the best camera resolution your browser exposes.</li>
+            <li>Applies contrast, color, denoise, and sharpening filters.</li>
+            <li>Downloads a JPEG and supports the mobile share sheet where available.</li>
+          </ul>
+        </aside>
+      </section>
+    </main>
+
+    <script src="app.js" type="module"></script>
+  </body>
+</html>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Zoom Photo Enhancer icon</title>
+  <defs>
+    <linearGradient id="background" x1="76" x2="436" y1="68" y2="444" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#34d399"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#020617" flood-opacity=".32"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="#08111f" rx="112"/>
+  <circle cx="256" cy="256" r="172" fill="url(#background)" opacity=".22"/>
+  <g filter="url(#shadow)">
+    <rect x="110" y="154" width="292" height="220" fill="#f8fafc" rx="44"/>
+    <path fill="#111827" d="M190 154h132l-25-44h-82z"/>
+    <circle cx="256" cy="264" r="78" fill="#111827"/>
+    <circle cx="256" cy="264" r="50" fill="#38bdf8"/>
+    <circle cx="256" cy="264" r="23" fill="#ecfeff"/>
+    <circle cx="356" cy="206" r="18" fill="#34d399"/>
+  </g>
+  <path fill="none" stroke="#f8fafc" stroke-linecap="round" stroke-width="22" d="M342 352l58 58"/>
+</svg>
