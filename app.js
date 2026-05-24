@@ -7,6 +7,8 @@ const zoomControl = document.querySelector("#zoomControl");
 const zoomValue = document.querySelector("#zoomValue");
 const autoEnhance = document.querySelector("#autoEnhance");
 const superResolution = document.querySelector("#superResolution");
+const enhanceStrength = document.querySelector("#enhanceStrength");
+const strengthValue = document.querySelector("#strengthValue");
 const preview = document.querySelector("#enhancedPreview");
 const previewFrame = document.querySelector(".preview-frame");
 const downloadLink = document.querySelector("#downloadPhoto");
@@ -60,6 +62,10 @@ const resetSavedImage = () => {
 
 const updateZoomLabel = (value) => {
   zoomValue.value = `${Number(value).toFixed(1)}x`;
+};
+
+const updateStrengthLabel = (value) => {
+  strengthValue.value = `${Number(value)}%`;
 };
 
 const applyFallbackZoom = (zoom) => {
@@ -179,40 +185,95 @@ const drawZoomedFrame = (targetCanvas) => {
   return ctx;
 };
 
-const enhanceImage = (ctx, width, height) => {
-  const frame = ctx.getImageData(0, 0, width, height);
-  const { data } = frame;
-  const original = new Uint8ClampedArray(data);
-  const amount = 0.62;
+const percentileFromHistogram = (histogram, total, percentile) => {
+  const target = total * percentile;
+  let count = 0;
 
-  for (let y = 1; y < height - 1; y += 1) {
-    for (let x = 1; x < width - 1; x += 1) {
-      const index = (y * width + x) * 4;
-
-      for (let channel = 0; channel < 3; channel += 1) {
-        const center = original[index + channel] * (1 + 4 * amount);
-        const top = original[((y - 1) * width + x) * 4 + channel] * amount;
-        const bottom = original[((y + 1) * width + x) * 4 + channel] * amount;
-        const left = original[(y * width + x - 1) * 4 + channel] * amount;
-        const right = original[(y * width + x + 1) * 4 + channel] * amount;
-        data[index + channel] = clamp(center - top - bottom - left - right, 0, 255);
-      }
+  for (let index = 0; index < histogram.length; index += 1) {
+    count += histogram[index];
+    if (count >= target) {
+      return index;
     }
   }
 
+  return histogram.length - 1;
+};
+
+const enhanceImage = (ctx, width, height, strengthPercent) => {
+  const frame = ctx.getImageData(0, 0, width, height);
+  const { data } = frame;
+  const original = new Uint8ClampedArray(data);
+  const corrected = new Uint8ClampedArray(data.length);
+  const strength = clamp(strengthPercent / 100, 0, 1);
+  const histograms = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
+  const totals = [0, 0, 0];
+  const pixelCount = width * height;
+
+  for (let index = 0; index < original.length; index += 4) {
+    for (let channel = 0; channel < 3; channel += 1) {
+      const value = original[index + channel];
+      histograms[channel][value] += 1;
+      totals[channel] += value;
+    }
+  }
+
+  const averages = totals.map((total) => total / pixelCount || 1);
+  const neutralAverage = (averages[0] + averages[1] + averages[2]) / 3;
+  const channelScales = averages.map((average) => clamp(neutralAverage / average, 0.78, 1.24));
+  const lows = histograms.map((histogram) => percentileFromHistogram(histogram, pixelCount, 0.01));
+  const highs = histograms.map((histogram) => percentileFromHistogram(histogram, pixelCount, 0.995));
+  const contrast = 1 + strength * 0.42;
+  const saturation = 1 + strength * 0.46;
+  const lift = strength * 8;
+
   for (let index = 0; index < data.length; index += 4) {
-    let red = data[index];
-    let green = data[index + 1];
-    let blue = data[index + 2];
-    const gray = red * 0.299 + green * 0.587 + blue * 0.114;
+    const leveled = [0, 0, 0];
 
-    red = gray + (red - gray) * 1.16;
-    green = gray + (green - gray) * 1.16;
-    blue = gray + (blue - gray) * 1.16;
+    for (let channel = 0; channel < 3; channel += 1) {
+      const range = Math.max(24, highs[channel] - lows[channel]);
+      const balanced = original[index + channel] * (1 + (channelScales[channel] - 1) * strength);
+      const normalized = ((balanced - lows[channel]) / range) * 255;
+      const blended = original[index + channel] * (1 - strength) + normalized * strength;
+      leveled[channel] = clamp((blended - 128) * contrast + 128 + lift, 0, 255);
+    }
 
-    data[index] = clamp((red - 128) * 1.12 + 138, 0, 255);
-    data[index + 1] = clamp((green - 128) * 1.12 + 138, 0, 255);
-    data[index + 2] = clamp((blue - 128) * 1.12 + 138, 0, 255);
+    const gray = leveled[0] * 0.299 + leveled[1] * 0.587 + leveled[2] * 0.114;
+    corrected[index] = clamp(gray + (leveled[0] - gray) * saturation, 0, 255);
+    corrected[index + 1] = clamp(gray + (leveled[1] - gray) * saturation, 0, 255);
+    corrected[index + 2] = clamp(gray + (leveled[2] - gray) * saturation, 0, 255);
+    corrected[index + 3] = original[index + 3];
+  }
+
+  const sharpenAmount = strength * 2;
+  const noiseGate = 4 + strength * 7;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 4;
+
+      if (x === 0 || y === 0 || x === width - 1 || y === height - 1) {
+        data[index] = corrected[index];
+        data[index + 1] = corrected[index + 1];
+        data[index + 2] = corrected[index + 2];
+        data[index + 3] = corrected[index + 3];
+        continue;
+      }
+
+      for (let channel = 0; channel < 3; channel += 1) {
+        const center = corrected[index + channel];
+        const blur =
+          (corrected[((y - 1) * width + x) * 4 + channel] +
+            corrected[((y + 1) * width + x) * 4 + channel] +
+            corrected[(y * width + x - 1) * 4 + channel] +
+            corrected[(y * width + x + 1) * 4 + channel]) /
+          4;
+        const detail = center - blur;
+        const sharpened = Math.abs(detail) < noiseGate ? center : center + detail * sharpenAmount;
+        data[index + channel] = clamp(sharpened, 0, 255);
+      }
+
+      data[index + 3] = corrected[index + 3];
+    }
   }
 
   ctx.putImageData(frame, 0, 0);
@@ -235,7 +296,7 @@ const captureAndEnhance = async () => {
   const ctx = drawZoomedFrame(canvas);
 
   if (autoEnhance.checked) {
-    enhanceImage(ctx, canvas.width, canvas.height);
+    enhanceImage(ctx, canvas.width, canvas.height, Number(enhanceStrength.value));
   }
 
   const blob = await canvasToBlob(canvas);
@@ -255,7 +316,9 @@ const captureAndEnhance = async () => {
   downloadLink.href = state.imageUrl;
   downloadLink.classList.remove("disabled");
   shareButton.disabled = !navigator.canShare?.({ files: [state.imageFile] });
-  qualitySummary.textContent = `${canvas.width} x ${canvas.height}px`;
+  qualitySummary.textContent = autoEnhance.checked
+    ? `${canvas.width} x ${canvas.height}px - ${enhanceStrength.value}% enhanced`
+    : `${canvas.width} x ${canvas.height}px - original capture`;
   setStatus("Enhanced photo ready to save", true);
   captureButton.disabled = false;
   captureButton.textContent = "Capture & enhance";
@@ -284,6 +347,7 @@ startButton.addEventListener("click", startCamera);
 switchButton.addEventListener("click", switchCamera);
 captureButton.addEventListener("click", captureAndEnhance);
 zoomControl.addEventListener("input", setZoom);
+enhanceStrength.addEventListener("input", (event) => updateStrengthLabel(event.target.value));
 shareButton.addEventListener("click", sharePhoto);
 
 if ("serviceWorker" in navigator) {

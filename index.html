@@ -59,6 +59,19 @@
             />
           </label>
 
+          <label class="range-control" for="enhanceStrength">
+            <span>Enhance strength</span>
+            <output id="strengthValue" for="enhanceStrength">85%</output>
+            <input
+              id="enhanceStrength"
+              type="range"
+              min="0"
+              max="100"
+              step="5"
+              value="85"
+            />
+          </label>
+
           <div class="enhancement-options" aria-label="Enhancement options">
             <label>
               <input id="autoEnhance" type="checkbox" checked />
@@ -106,7 +119,7 @@
 
           <ul class="feature-list">
             <li>Uses the best camera resolution your browser exposes.</li>
-            <li>Applies contrast, color, denoise, and sharpening filters.</li>
+            <li>Applies auto-levels, white balance, color boost, and clarity sharpening.</li>
             <li>Downloads a JPEG and supports the mobile share sheet where available.</li>
           </ul>
         </aside>

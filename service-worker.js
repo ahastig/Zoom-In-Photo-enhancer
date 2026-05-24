@@ -1,4 +1,4 @@
-const CACHE_NAME = "zoom-photo-enhancer-v1";
+const CACHE_NAME = "zoom-photo-enhancer-v2";
 const ASSETS = [
   "./",
   "./index.html",
