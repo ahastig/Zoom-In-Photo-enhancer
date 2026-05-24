@@ -57,5 +57,5 @@ While GitHub Pages is waiting to be enabled or merged, the same static app is
 available as a pinned free RawCDN copy at:
 
 ```text
-https://rawcdn.githack.com/ahastig/Zoom-In-Photo-enhancer/1692d1af0a7474b4215d42e3e9766c10afc88e80/index.html
+https://rawcdn.githack.com/ahastig/Zoom-In-Photo-enhancer/04b1f6e3d94932b8350d9a6e1f2453e0fd80a39f/index.html
 ```
